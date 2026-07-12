@@ -17,7 +17,7 @@ dp= Dispatcher()
 class BirthdayForm(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthday = State()
-database= sqlite3.connect("BD.Database")
+database= sqlite3.connect("database.sqlite")
 cursor= database.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS Birthdays(
