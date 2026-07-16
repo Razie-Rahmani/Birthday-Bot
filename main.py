@@ -28,27 +28,28 @@ CREATE TABLE IF NOT EXISTS Birthdays(
 """)
 database.commit()
 
-async def main_menu(message: Message):
+async def main_menu(message: Message, is_start: bool=False):
     keyboard= InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text= "Log Birthday", callback_data= "get_bd")],
-            [InlineKeyboardButton(text= "View Birthday", callback_data= "view_bd")]
+            [InlineKeyboardButton(text= "View Birthdays", callback_data= "view_bd")]
         ]
     )
-    await message.answer(
-        "Welcome to the Birthday Bot!",
-        reply_markup= keyboard
-    )
+    if is_start:
+        text= "Welcome to the Birthday Bot!\n\nShare with friends to have all the birthdays in one place!"
+    else:
+        text= "What would you like to do next?"
+    await message.answer(text, reply_markup= keyboard)
 
 @dp.message(Command("start"))
 async def start(message: Message):
-    await main_menu(message)
+    await main_menu(message, is_start=True)
 
 @dp.callback_query(F.data=="get_bd")
 async def log_birthdays(callback: CallbackQuery, state: FSMContext):
     await state.set_state(BirthdayForm.waiting_for_name)
     await callback.message.answer("What's your name?")
-    await callback.answer()
+    await callback.answer("Done!")
 
 async def main():
     await dp.start_polling(bot)
@@ -57,19 +58,19 @@ async def main():
 async def get_name(msg: Message, state: FSMContext):
     name = msg.text.strip()
     if not name:
-        await msg.answer("Pls send a valid name.")
+        await msg.answer("Please enter a valid name.")
         return
     await state.update_data(username= name)
     await state.set_state(BirthdayForm.waiting_for_birthday)
     await msg.answer(
-        f"Nice to meet u {name}!\nWhen's ur birthday?!\n\nExample Format (DD.MM.YYYY)"
+        f"Nice to meet you, {name}!\nWhen's your birthday?\n\nExample Format (DD.MM.YYYY)"
     )
 
 @dp.message(BirthdayForm.waiting_for_birthday)
 async def get_bd(bd: Message, state: FSMContext):
     birthday = bd.text.strip()
     if not birthday:
-        await bd.answer("Pls enter a valid date.")
+        await bd.answer("Please enter a valid date.")
         return
     data= await state.get_data()
     name= data.get("username")
@@ -92,12 +93,11 @@ async def show_birthday_table(callback: CallbackQuery):
         await callback.message.answer(
             "No Birthdays Logged.")
     else:
-        text= "Birthday:\n\n"
+        text= "Birthdays:\n\n"
         for Name, Birthday in birthdays:
             text += f"- {Name}: {Birthday}\n"
         await callback.message.answer(text)
     await main_menu(callback.message)
-    await callback.answer("Done!", show_alert= True)
 
 if __name__== "__main__":
     asyncio.run(main())
