@@ -45,6 +45,10 @@ async def main_menu(message: Message, is_start: bool=False):
 async def start(message: Message):
     await main_menu(message, is_start=True)
 
+@dp.message(Command("cancel"))
+async def cancel(message: Message):
+    if state
+
 @dp.callback_query(F.data=="get_bd")
 async def log_birthdays(callback: CallbackQuery, state: FSMContext):
     await state.set_state(BirthdayForm.waiting_for_name)
