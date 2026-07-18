@@ -46,8 +46,14 @@ async def start(message: Message):
     await main_menu(message, is_start=True)
 
 @dp.message(Command("cancel"))
-async def cancel(message: Message):
-    if state
+async def cancel(message: Message, state: FSMContext):
+    current_state= await state.get_state()
+    if current_state is None:
+        await message.answer("No active operation to cancel.")
+        return
+    await state.clear()
+    await message.answer("Operation cancelled.")
+    await main_menu(message)
 
 @dp.callback_query(F.data=="get_bd")
 async def log_birthdays(callback: CallbackQuery, state: FSMContext):
