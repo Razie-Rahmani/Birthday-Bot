@@ -107,6 +107,7 @@ async def show_birthday_table(callback: CallbackQuery):
         for Name, Birthday in birthdays:
             text += f"- {Name}: {Birthday}\n"
         await callback.message.answer(text)
+    await callback.answer()
     await main_menu(callback.message)
 
 if __name__== "__main__":
