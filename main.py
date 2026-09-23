@@ -52,8 +52,8 @@ app = FastAPI(lifespan=lifespan)
 class BirthdayForm(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthday = State()
-database= sqlite3.connect("/database/database.sqlite")
-cursor= database.cursor()
+database = sqlite3.connect("database.sqlite")
+cursor = database.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS Birthdays(
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
