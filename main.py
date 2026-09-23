@@ -1,21 +1,54 @@
-#comment 
+# coming up:
+# ☑️ change polling to webhook 
+# register the webhook with telegram --> set_webhook()
+# Render start command: runs a ASGI server
+# environment variables
+# change sqlite to postgres render
+# deploy on render
+# feat: create/join group (+ all its features)
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, WebhookInfo, Update
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from fastapi import FastAPI, Request, Response, HTTPException
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
 import asyncio
 import sqlite3
+import logging
+import logger_config 
 
 load_dotenv()
 
-TOKEN = os.getenv("BOT_TOKEN")
+logger = logging.getLogger(__name__)
+logger.info("🍃 Application Started 🍃")
 
-bot= Bot(token=TOKEN)
-dp= Dispatcher()
+TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_PATH = "/webhook"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+
+# Lifespan Setup
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🔥 WEBHOOK_URL =", WEBHOOK_URL)
+    print("🔥 WEBHOOK_SECRET configured =", bool(WEBHOOK_SECRET))
+    result = await bot.set_webhook(
+        url = WEBHOOK_URL,
+        secret_token = WEBHOOK_SECRET
+    )
+    print("🔥 set_webhook result =", result) 
+    yield
+    await bot.session.close()
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+app = FastAPI(lifespan=lifespan)
+
 class BirthdayForm(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthday = State()
@@ -63,9 +96,6 @@ async def log_birthdays(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("What's your name?")
     await callback.answer("Done!")
 
-async def main():
-    await dp.start_polling(bot)
-
 @dp.message(BirthdayForm.waiting_for_name)
 async def get_name(msg: Message, state: FSMContext):
     name = msg.text.strip()
@@ -112,5 +142,11 @@ async def show_birthday_table(callback: CallbackQuery):
     await callback.answer()
     await main_menu(callback.message)
 
-if __name__== "__main__":
-    asyncio.run(main())
+# Webhook Configuration
+
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(request: Request):
+    data = await request.json()
+    update = Update.model_validate(data, context={"bot" : bot})
+    await dp.feed_update(bot, update)
+    return {"ok" : True}
