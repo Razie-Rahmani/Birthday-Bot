@@ -35,13 +35,13 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🔥 WEBHOOK_URL =", WEBHOOK_URL)
-    print("🔥 WEBHOOK_SECRET configured =", bool(WEBHOOK_SECRET))
+    logger.info("🔥 WEBHOOK_URL = %s", WEBHOOK_URL)
+    logger.info("🔥 WEBHOOK_SECRET configured = %s", bool(WEBHOOK_SECRET))
     result = await bot.set_webhook(
         url = WEBHOOK_URL,
         secret_token = WEBHOOK_SECRET
     )
-    print("🔥 set_webhook result =", result) 
+    logger.info("🔥 set_webhook result = %s", result) 
     yield
     await bot.session.close()
 
@@ -146,6 +146,8 @@ async def show_birthday_table(callback: CallbackQuery):
 
 @app.post(WEBHOOK_PATH)
 async def telegram_webhook(request: Request):
+    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != WEBHOOK_SECRET:
+        raise HTTPException(status_code=403)
     data = await request.json()
     update = Update.model_validate(data, context={"bot" : bot})
     await dp.feed_update(bot, update)
