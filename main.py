@@ -1,25 +1,25 @@
 # coming up:
 # ☑️ change polling to webhook 
-# register the webhook with telegram --> set_webhook()
-# Render start command: runs a ASGI server
-# environment variables
-# change sqlite to postgres render
+# ☑️ register the webhook with telegram --> set_webhook()
+# ☑️ Render start command: runs a ASGI server
+# ☑️ environment variables
+# ☑️ change sqlite to postgres render
 # deploy on render
 # feat: create/join group (+ all its features)
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, WebhookInfo, Update
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Update
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from fastapi import FastAPI, Request, Response, HTTPException
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
-import asyncio
-import sqlite3
 import logging
-import logger_config 
+import logger_config as _
+from db import engine, async_session, Base, User1
+from sqlalchemy import select
 
 load_dotenv()
 
@@ -35,6 +35,8 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
+    # --- startup ---
     logger.info("🔥 WEBHOOK_URL = %s", WEBHOOK_URL)
     logger.info("🔥 WEBHOOK_SECRET configured = %s", bool(WEBHOOK_SECRET))
     result = await bot.set_webhook(
@@ -42,7 +44,14 @@ async def lifespan(app: FastAPI):
         secret_token = WEBHOOK_SECRET
     )
     logger.info("🔥 set_webhook result = %s", result) 
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     yield
+
+    # --- shutdown ---
+    await engine.dispose()
     await bot.session.close()
 
 bot = Bot(token=TOKEN)
@@ -52,16 +61,6 @@ app = FastAPI(lifespan=lifespan)
 class BirthdayForm(StatesGroup):
     waiting_for_name = State()
     waiting_for_birthday = State()
-database = sqlite3.connect("database.sqlite")
-cursor = database.cursor()
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS Birthdays(
-    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT,
-    Birthday TEXT
-)               
-""")
-database.commit()
 
 async def main_menu(message: Message, is_start: bool=False):
     keyboard= InlineKeyboardMarkup(
@@ -116,11 +115,8 @@ async def get_bd(bd: Message, state: FSMContext):
         return
     data= await state.get_data()
     name= data.get("username")
-    cursor.execute("""
-    INSERT INTO Birthdays (Name, Birthday)
-    VALUES (?, ?)
-    """, (name, birthday))
-    database.commit()
+    async with async_session.begin() as session:
+        session.add(User1(name=name, birthday=birthday))
     await state.clear()
     await bd.answer(
         f"Name and Birthday Logged!\n\n{name}'s birthday is on {birthday}."
@@ -129,15 +125,16 @@ async def get_bd(bd: Message, state: FSMContext):
 
 @dp.callback_query(F.data== "view_bd")
 async def show_birthday_table(callback: CallbackQuery):
-    cursor.execute("SELECT Name, Birthday FROM Birthdays")
-    birthdays= cursor.fetchall()
+    async with async_session() as session:
+        result = await session.execute(select(User1))
+        birthdays = result.scalars().all()
     if not birthdays:
         await callback.message.answer(
             "No Birthdays Logged.")
     else:
         text= "Birthdays:\n\n"
-        for Name, Birthday in birthdays:
-            text += f"- {Name}: {Birthday}\n"
+        for user in birthdays:
+            text += f"- {user.name}: {user.birthday}\n"
         await callback.message.answer(text)
     await callback.answer()
     await main_menu(callback.message)
