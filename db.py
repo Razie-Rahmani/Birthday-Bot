@@ -2,7 +2,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 
-from sqlalchemy import Integer, String
+from sqlalchemy import Integer, String, Date
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, mapped_column
 
@@ -16,7 +16,7 @@ class User1(Base):
 
     id = mapped_column(Integer, primary_key=True)
     name = mapped_column(String, nullable=False)
-    birthday = mapped_column(String, nullable=False)
+    birthday = mapped_column(Date, nullable=False)
 
 # external url for testing locally, internal url for actual implementation
 database_url = os.getenv("INTERNAL_DATABASE_URL") or os.getenv("EXTERNAL_DATABASE_URL")

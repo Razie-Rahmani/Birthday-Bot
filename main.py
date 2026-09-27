@@ -17,9 +17,11 @@
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Update
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram_calendar import DialogCalendar, DialogCalendarCallback
 from fastapi import FastAPI, Request, Response, HTTPException
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -109,27 +111,28 @@ async def get_name(msg: Message, state: FSMContext):
     if not name:
         await msg.answer("Please enter a valid name.")
         return
-    await state.update_data(username= name)
+    await state.update_data(username=name)
     await state.set_state(BirthdayForm.waiting_for_birthday)
     await msg.answer(
-        f"Nice to meet you, {name}!\nWhen's your birthday?\n\nExample Format (DD.MM.YYYY)"
+        f"Nice to meet you, {name}!\nWhen's your birthday?",
+        reply_markup=await DialogCalendar().start_calendar()
     )
 
-@dp.message(BirthdayForm.waiting_for_birthday)
-async def get_bd(bd: Message, state: FSMContext):
-    birthday = bd.text.strip()
-    if not birthday:
-        await bd.answer("Please enter a valid date.")
-        return
-    data= await state.get_data()
-    name= data.get("username")
+@dp.callback_query(BirthdayForm.waiting_for_birthday, DialogCalendarCallback.filter())
+async def get_bd(callback: CallbackQuery, callback_data: CallbackData, state: FSMContext):
+    selected, date = await DialogCalendar().process_selection(callback, callback_data)
+    if not selected:
+        return  # user is still picking year/month — calendar edits itself, nothing to save yet
+
+    data = await state.get_data()
+    name = data.get("username")
     async with async_session.begin() as session:
-        session.add(User1(name=name, birthday=birthday))
+        session.add(User1(name=name, birthday=date))
     await state.clear()
-    await bd.answer(
-        f"Name and Birthday Logged!\n\n{name}'s birthday is on {birthday}."
+    await callback.message.answer(
+        f"Name and Birthday Logged!\n\n{name}'s birthday is on {date.strftime('%d.%m.%Y')}."
     )
-    await main_menu(bd)
+    await main_menu(callback.message)
 
 @dp.callback_query(F.data== "view_bd")
 async def show_birthday_table(callback: CallbackQuery):

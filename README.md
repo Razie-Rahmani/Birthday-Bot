@@ -65,6 +65,7 @@ The project is currently in the middle of moving to v2.1. The main deployment an
 * ☑️ Add environment variables
 * ☑️ Change SQLite to PostgreSQL on Render
 * ☑️ Deploy on Render
+* ☑️ Date picker tool
 
 #### Still in Progress
 
@@ -74,13 +75,13 @@ The project is currently in the middle of moving to v2.1. The main deployment an
 * **Sort dates generally** — improve how birthdays are ordered
 * **Sort by upcoming date** — order birthdays by proximity to today
 * **Reminders** — message users a set number of days before a birthday. This requires a background scheduler and storing each user's chat ID, neither of which exists yet
-* **Stricter date validation** — current input accepts any text as a date; proper validation (leap years, days per month) is needed
-
+* **No Duplicate Names Check** — prevent duplicate names regardless of capitalization
 
 ### v2.2 — Planned
 
 These are larger features that were identified during development but are being left for the next stage rather than being added while v2.1 is still being finished.
 
+* **Users' profile picture** — each user can add a picture for herself if she wants
 * **Admin panel** — one main admin and one admin for each group; first feature will be CRUD operations
 * **Create/join group** — add group creation and joining, along with all related features
 * **Birthday event planner** — add an event planner for each birthday, including place, people, theme, and a way for the birthday person to send invitations to their friends
