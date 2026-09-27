@@ -4,8 +4,16 @@
 # ☑️ Render start command: runs a ASGI server
 # ☑️ environment variables
 # ☑️ change sqlite to postgres render
-# deploy on render
+# ☑️ deploy on render
+# polish: make it look pretty, up UI
+# upgrade: make it more modular (handlers/, services/, keyboards/, etc.)
+# feat: delete/edit a bd if id is the same as the one entered (needs telegram checking ids)
+# feat: sort dates generally
+# feat: sort by upcoming date
+# feat: admin panel (one main, one for each group) --> first feat: CRUD ops
 # feat: create/join group (+ all its features)
+# feat: add new events planner for each birthday (including place, people, theme, a way for the bd person to send an invitation to her firends, etc.)
+
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
