@@ -25,7 +25,8 @@ A Telegram bot for logging and viewing birthdays in one shared place.
 
    ```
    BOT_TOKEN=your_telegram_bot_token
-   DATABASE_URL=your_postgresql_database_url
+   INTERNAL_DATABASE_URL=your_internal_postgresql_database_url
+   EXTERNAL_DATABASE_URL=your_external_postgresql_database_url
    ```
 3. Install dependencies:
 
@@ -67,15 +68,49 @@ The project is currently in the middle of moving to v2.1. The main deployment an
 * ☑️ Deploy on Render
 * ☑️ Date picker tool
 * ☑️ No duplicate names within the same group - regardless of capitalisation
+* ☑️ Modularized
 
 #### Still in Progress
 
-* **Polish** — make the bot look better and improve the UI
-* **Upgrade** — make the project more modular (`handlers/`, `services/`, `keyboards/`, etc.)
-* **Additional commands** — `/delete` and `/edit_birthday` for managing existing entries, `/join` for group support; requires checking Telegram IDs
-* **Sort dates generally** — improve how birthdays are ordered
-* **Sort by upcoming date** — order birthdays by proximity to today
-* **Reminders** — message users a set number of days before a birthday. This requires a background scheduler and storing each user's chat ID, neither of which exists yet
+A single flat feature list turned out to hide real dependencies between features — several items only make sense once an earlier one exists (reminders need real per-user Telegram IDs, which need groups to exist first, and so on). So this is now ordered as build phases, each depending on the one before it, rather than a loose checklist.
+
+**Phase 1 — Schema foundation**
+Nothing else below can be built correctly until this is in place.
+* `Users` table — `telegram_id`, `name`, `birthday`
+* `Groups` table — `id`, `name`, `password_hash`
+* `GroupMembers` join table — `user_id`, `group_id` (includes a `role` column now, defaulted to `"member"`, so the v2.2 admin panel doesn't need its own migration later)
+* Retire the old `Birthdays` table and the free-typed-name logging flow entirely
+* Update `services/`, `handlers/`, and `states/` to operate on Users/Groups/GroupMembers instead of the old model
+
+**Phase 2 — Onboarding & registration**
+* First-ever `/start` → "Join existing group" or "Create new group" (one-time only, per person)
+* Every later `/start` → auto-enters their one group, or asks which one if they belong to several
+* **Log Birthday** → becomes "register your own birthday," read from `message.from_user`, no more typing someone else's name
+
+**Phase 3 — Group management surface**
+* "Groups" button on the main menu → join another group, create another, or switch between groups already joined; only place a password is entered outside first-time onboarding
+
+**Phase 4 — Additional commands**
+* `/delete` and `/edit_birthday`, each scoped to the caller's own `telegram_id` — this is what "requires checking Telegram IDs" turns into once Phase 1 exists: a user's ID *is* their row, so there's no ambiguity left to resolve
+* `/join` — same mechanism as the Phase 3 "Groups" button, exposed as a command
+
+**Phase 5 — Sorting**
+* Sort dates generally
+* Sort by upcoming date
+
+Both scoped per group rather than globally, now that groups are real.
+
+**Phase 6 — Reminders**
+* Background scheduler
+* Per-group notification to other members ahead of a birthday ("Sara's birthday is in 1 week")
+* Separate, one-off "Happy birthday" DM sent directly to the birthday person
+
+This is the most dependent feature on the list — it needs groups, membership, and real per-user Telegram IDs, all from earlier phases, to know who to message and where.
+
+**Phase 7 — Polish**
+* UI/UX pass on wording, menus, and flow
+
+Deliberately last — no point polishing surfaces that are still changing shape through Phases 1–6.
 
 ### v2.2 — Planned
 
@@ -83,8 +118,11 @@ These are larger features that were identified during development but are being 
 
 * **Users' profile picture** — each user can add a picture for herself if she wants
 * **Admin panel** — one main admin and one admin for each group; first feature will be CRUD operations
-* **Create/join group** — add group creation and joining, along with all related features
 * **Birthday event planner** — add an event planner for each birthday, including place, people, theme, and a way for the birthday person to send invitations to their friends
+
+### v3 — Planned
+
+Frontend work — a proper interface beyond Telegram's own chat UI. Nothing about v2.1 or v2.2 is being built with this as a hard requirement, but the modular `services/`/`handlers/` split means a future frontend could call the same `services/` functions the Telegram handlers already use, through new FastAPI routes, without needing to touch or duplicate the underlying group/birthday logic.
 
 ## What I Learned
 

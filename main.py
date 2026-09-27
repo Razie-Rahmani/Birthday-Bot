@@ -18,6 +18,8 @@ dp = Dispatcher()
 dp.include_router(common.router)
 dp.include_router(birthday_handlers.router)
 
+_seen_update_ids: set[int] = set()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,6 +47,12 @@ async def telegram_webhook(request: Request):
     if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != WEBHOOK_SECRET:
         raise HTTPException(status_code=403)
     data = await request.json()
+
+    update_id = data.get("update_id")
+    if update_id in _seen_update_ids:
+        return {"ok": True} 
+    _seen_update_ids.add(update_id)
+
     update = Update.model_validate(data, context={"bot": bot})
     await dp.feed_update(bot, update)
     return {"ok": True}

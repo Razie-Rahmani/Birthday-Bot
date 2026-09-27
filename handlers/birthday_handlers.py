@@ -13,9 +13,9 @@ router = Router()
 
 @router.callback_query(F.data == "get_bd")
 async def log_birthdays(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("Done!")  
     await state.set_state(BirthdayForm.waiting_for_name)
     await callback.message.answer("What's your name?")
-    await callback.answer("Done!")
 
 
 @router.message(BirthdayForm.waiting_for_name)
@@ -45,7 +45,9 @@ async def get_name(msg: Message, state: FSMContext) -> None:
 async def get_bd(callback: CallbackQuery, callback_data: CallbackData, state: FSMContext) -> None:
     selected, date = await DialogCalendar().process_selection(callback, callback_data)
     if not selected:
-        return  # user is still picking year/month — calendar edits itself, nothing to save yet
+        return 
+
+    await callback.answer() 
 
     data = await state.get_data()
     name = data.get("username")
@@ -61,6 +63,7 @@ async def get_bd(callback: CallbackQuery, callback_data: CallbackData, state: FS
 
 @router.callback_query(F.data == "view_bd")
 async def show_birthday_table(callback: CallbackQuery) -> None:
+    await callback.answer() 
     birthdays = await get_birthdays_for_chat(callback.message.chat.id)
     if not birthdays:
         await callback.message.answer("No Birthdays Logged.")
@@ -69,5 +72,4 @@ async def show_birthday_table(callback: CallbackQuery) -> None:
         for user in birthdays:
             text += f"- {user.name}: {user.birthday}\n"
         await callback.message.answer(text)
-    await callback.answer()
     await send_main_menu(callback.message)
