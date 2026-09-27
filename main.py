@@ -29,7 +29,7 @@ import os
 import logging
 import logger_config as _
 from db import engine, async_session, Base, User1
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 load_dotenv()
 
@@ -111,7 +111,25 @@ async def get_name(msg: Message, state: FSMContext):
     if not name:
         await msg.answer("Please enter a valid name.")
         return
-    await state.update_data(username=name)
+    
+    chat_id = msg.chat.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User1).where(
+                func.lower(User1.name) == name.lower(),
+                User1.chat_id == chat_id
+            )
+        )
+        existing = result.scalar_one_or_none()
+
+    if existing:
+        await msg.answer(
+            f"{name} is already logged in this chat. Please enter a different name, or /cancel."
+        )
+        return
+
+    await state.update_data(username=name, chat_id=chat_id)
     await state.set_state(BirthdayForm.waiting_for_birthday)
     await msg.answer(
         f"Nice to meet you, {name}!\nWhen's your birthday?",
@@ -126,8 +144,9 @@ async def get_bd(callback: CallbackQuery, callback_data: CallbackData, state: FS
 
     data = await state.get_data()
     name = data.get("username")
+    chat_id = data.get("chat_id")
     async with async_session.begin() as session:
-        session.add(User1(name=name, birthday=date))
+        session.add(User1(name=name, birthday=date, chat_id=chat_id))
     await state.clear()
     await callback.message.answer(
         f"Name and Birthday Logged!\n\n{name}'s birthday is on {date.strftime('%d.%m.%Y')}."
@@ -137,7 +156,9 @@ async def get_bd(callback: CallbackQuery, callback_data: CallbackData, state: FS
 @dp.callback_query(F.data== "view_bd")
 async def show_birthday_table(callback: CallbackQuery):
     async with async_session() as session:
-        result = await session.execute(select(User1))
+        result = await session.execute(
+            select(User1).where(User1.chat_id == callback.message.chat.id)
+        )
         birthdays = result.scalars().all()
     if not birthdays:
         await callback.message.answer(

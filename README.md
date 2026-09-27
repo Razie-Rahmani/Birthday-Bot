@@ -66,6 +66,7 @@ The project is currently in the middle of moving to v2.1. The main deployment an
 * ☑️ Change SQLite to PostgreSQL on Render
 * ☑️ Deploy on Render
 * ☑️ Date picker tool
+* ☑️ No duplicate names within the same group - regardless of capitalisation
 
 #### Still in Progress
 
@@ -75,7 +76,6 @@ The project is currently in the middle of moving to v2.1. The main deployment an
 * **Sort dates generally** — improve how birthdays are ordered
 * **Sort by upcoming date** — order birthdays by proximity to today
 * **Reminders** — message users a set number of days before a birthday. This requires a background scheduler and storing each user's chat ID, neither of which exists yet
-* **No Duplicate Names Check** — prevent duplicate names regardless of capitalization
 
 ### v2.2 — Planned
 

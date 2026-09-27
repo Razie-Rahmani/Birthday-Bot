@@ -2,7 +2,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 
-from sqlalchemy import Integer, String, Date
+from sqlalchemy import Integer, BigInteger, String, Date
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, mapped_column
 
@@ -15,6 +15,7 @@ class User1(Base):
     __tablename__ = "Birthdays"
 
     id = mapped_column(Integer, primary_key=True)
+    chat_id = mapped_column(BigInteger, nullable=False)
     name = mapped_column(String, nullable=False)
     birthday = mapped_column(Date, nullable=False)
 
@@ -22,7 +23,7 @@ class User1(Base):
 database_url = os.getenv("INTERNAL_DATABASE_URL") or os.getenv("EXTERNAL_DATABASE_URL")
 
 if database_url is None:
-    raise RuntimeError("No database URL found — set DATABASE_URL or EXTERNAL_DATABASE_URL in your environment.")
+    raise RuntimeError("No database URL found — set INTERNAL_DATABASE_URL or EXTERNAL_DATABASE_URL in your environment.")
 
 async_database_url = database_url.replace(
     "postgresql://",
